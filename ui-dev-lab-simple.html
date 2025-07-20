@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UI Development Lab - Simple Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f0f0f0;
+            margin: 20px;
+        }
+        .header {
+            background: #333;
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .workspace {
+            background: white;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            min-height: 400px;
+            padding: 20px;
+            position: relative;
+        }
+        .element {
+            position: absolute;
+            background: #007bff;
+            color: white;
+            padding: 10px;
+            border-radius: 4px;
+            cursor: move;
+            user-select: none;
+        }
+        .palette {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+        .palette-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: #f8f9fa;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .palette-item:hover {
+            background: #e9ecef;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>UI Development Lab - Simple Test</h1>
+        <p>If you can see this, the page is loading correctly!</p>
+    </div>
+
+    <div class="workspace" id="workspace">
+        <p>Workspace area - drag elements here</p>
+    </div>
+
+    <div class="palette">
+        <h3>Elements</h3>
+        <div class="palette-item" onclick="addElement('Header', 'Header Element')">Header</div>
+        <div class="palette-item" onclick="addElement('Button', 'Button Element')">Button</div>
+        <div class="palette-item" onclick="addElement('Text', 'Text Element')">Text</div>
+    </div>
+
+    <script>
+        let elementCount = 0;
+
+        function addElement(type, label) {
+            elementCount++;
+            const element = document.createElement('div');
+            element.className = 'element';
+            element.textContent = label;
+            element.style.left = (50 + elementCount * 20) + 'px';
+            element.style.top = (50 + elementCount * 20) + 'px';
+            
+            element.addEventListener('mousedown', startDrag);
+            
+            document.getElementById('workspace').appendChild(element);
+        }
+
+        function startDrag(e) {
+            e.preventDefault();
+            const element = e.target;
+            const workspace = document.getElementById('workspace');
+            const workspaceRect = workspace.getBoundingClientRect();
+            
+            const startX = e.clientX - workspaceRect.left - element.offsetLeft;
+            const startY = e.clientY - workspaceRect.top - element.offsetTop;
+            
+            function onMouseMove(e) {
+                const newX = e.clientX - workspaceRect.left - startX;
+                const newY = e.clientY - workspaceRect.top - startY;
+                
+                element.style.left = Math.max(0, newX) + 'px';
+                element.style.top = Math.max(0, newY) + 'px';
+            }
+            
+            function onMouseUp() {
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            }
+            
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        }
+
+        console.log('UI Lab loaded successfully!');
+    </script>
+</body>
+</html> 

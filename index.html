@@ -1,0 +1,1390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Collaborative Page Builder - UI Development Lab</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .app-container {
+            display: flex;
+            height: 100vh;
+            position: relative;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: #2c3e50;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            transition: transform 0.2s ease;
+            position: relative;
+            z-index: 100;
+            border-right: 1px solid #34495e;
+            padding-right: 8px;
+            margin-right: 8px;
+        }
+
+        .sidebar.collapsed {
+            transform: translateX(-280px);
+        }
+
+        .sidebar-toggle {
+            position: fixed;
+            top: 0;
+            left: 280px;
+            width: 8px;
+            height: 100vh;
+            background: #d1d5db;
+            border: none;
+            cursor: col-resize;
+            transition: all 0.2s ease;
+            z-index: 1001;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: auto;
+        }
+
+        .sidebar-toggle:hover {
+            background: #9ca3af;
+            width: 12px;
+        }
+
+        .sidebar-toggle::before {
+            content: '';
+            width: 0;
+            height: 0;
+            border-left: 4px solid #6b7280;
+            border-top: 4px solid transparent;
+            border-bottom: 4px solid transparent;
+            transition: all 0.2s ease;
+            position: absolute;
+            left: 1px;
+        }
+
+        .sidebar-toggle:hover::before {
+            border-left-color: #374151;
+        }
+
+        .sidebar.collapsed ~ .sidebar-toggle {
+            left: 0;
+        }
+
+        .sidebar.collapsed ~ .sidebar-toggle::before {
+            border-left: none;
+            border-right: 4px solid #6b7280;
+            border-top: 4px solid transparent;
+            border-bottom: 4px solid transparent;
+            left: auto;
+            right: 1px;
+        }
+
+        .sidebar.collapsed ~ .sidebar-toggle:hover::before {
+            border-right-color: #374151;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #34495e;
+        }
+
+        .sidebar-header h1 {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        .sidebar-section {
+            padding: 15px 20px;
+            border-bottom: 1px solid #34495e;
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #ecf0f1;
+        }
+
+        .element-types {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .element-type {
+            background: #34495e;
+            border: 1px solid #4a5f7a;
+            border-radius: 4px;
+            padding: 10px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s;
+            font-size: 12px;
+        }
+
+        .element-type:hover {
+            background: #4a5f7a;
+            border-color: #5d6d7e;
+        }
+
+        .element-type.selected {
+            background: #3498db;
+            border-color: #2980b9;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: #ecf0f1;
+            margin-bottom: 5px;
+        }
+
+        .control-group input, .control-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #4a5f7a;
+            border-radius: 4px;
+            background: #34495e;
+            color: white;
+            font-size: 12px;
+        }
+
+        .control-group input[type="checkbox"] {
+            width: auto;
+            margin-right: 8px;
+        }
+
+        .button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.2s;
+            width: 100%;
+            margin-bottom: 8px;
+        }
+
+        .button:hover {
+            background: #2980b9;
+        }
+
+        .button.danger {
+            background: #e74c3c;
+        }
+
+        .button.danger:hover {
+            background: #c0392b;
+        }
+
+        .button.success {
+            background: #27ae60;
+        }
+
+        .button.success:hover {
+            background: #229954;
+        }
+
+        .button.warning {
+            background: #f39c12;
+        }
+
+        .button.warning:hover {
+            background: #e67e22;
+        }
+
+        .main-workspace {
+            flex: 1;
+            position: relative;
+            background: #ecf0f1;
+            overflow: auto;
+            transition: all 0.2s ease;
+            margin-left: 0;
+        }
+
+        .sidebar.collapsed ~ .main-workspace {
+            margin-left: 0;
+            width: 100vw;
+            max-width: 100vw;
+            flex: 1;
+        }
+
+        .workspace {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background: white;
+            overflow: hidden;
+        }
+
+        .grid-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            background-image: 
+                linear-gradient(rgba(0,0,0,0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,0,0,0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        .element {
+            position: absolute;
+            border-radius: 4px;
+            cursor: move;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 600;
+            min-width: 80px;
+            min-height: 40px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+
+        .element:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .element.selected {
+            border-color: #f39c12;
+            box-shadow: 0 0 0 2px rgba(243, 156, 18, 0.3);
+        }
+
+        .element.dragging {
+            opacity: 0.8;
+            z-index: 1000;
+        }
+
+        .element.resize-handle {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #f39c12;
+            border-radius: 50%;
+            cursor: nw-resize;
+            bottom: -4px;
+            right: -4px;
+            display: none;
+        }
+
+        .element:hover .resize-handle {
+            display: block;
+        }
+
+        .element.comment-indicator {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 16px;
+            height: 16px;
+            background: #e74c3c;
+            border-radius: 50%;
+            color: white;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        /* Element Types */
+        .element.button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            text-align: center;
+        }
+
+        .element.text-box {
+            background: #ecf0f1;
+            color: #2c3e50;
+            border: 1px solid #bdc3c7;
+            padding: 10px;
+            text-align: left;
+            align-items: flex-start;
+        }
+
+        .element.image {
+            background: #95a5a6;
+            color: white;
+            border: 2px dashed #7f8c8d;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .element.container {
+            background: rgba(52, 152, 219, 0.1);
+            border: 2px dashed #3498db;
+            color: #2980b9;
+        }
+
+        .element.header {
+            background: #34495e;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .element.input {
+            background: white;
+            color: #2c3e50;
+            border: 1px solid #bdc3c7;
+            padding: 8px;
+        }
+
+        .element.card {
+            background: white;
+            color: #2c3e50;
+            border: 1px solid #ecf0f1;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 15px;
+        }
+
+        .coordinates {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-family: monospace;
+            z-index: 100;
+        }
+
+        .element-count {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            z-index: 100;
+        }
+
+        .properties-panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            padding: 20px;
+            width: 300px;
+            max-height: 80vh;
+            overflow-y: auto;
+            display: none;
+            z-index: 1000;
+        }
+
+        .properties-panel.visible {
+            display: block;
+        }
+
+        .properties-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+
+        .property-group {
+            margin-bottom: 15px;
+        }
+
+        .property-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .property-group input, .property-group select, .property-group textarea {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .property-group textarea {
+            height: 60px;
+            resize: vertical;
+        }
+
+        .size-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .size-controls input {
+            width: 60px;
+        }
+
+        .close-panel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .comment-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .comment-modal.visible {
+            display: flex;
+        }
+
+        .comment-content {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            width: 400px;
+            max-width: 90vw;
+        }
+
+        .comment-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+
+        .comment-textarea {
+            width: 100%;
+            height: 100px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            resize: vertical;
+            margin-bottom: 15px;
+        }
+
+        .comment-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .comments-panel {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            padding: 20px;
+            width: 350px;
+            max-height: 400px;
+            overflow-y: auto;
+            display: none;
+            z-index: 1000;
+        }
+
+        .comments-panel.visible {
+            display: block;
+        }
+
+        .comment-item {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+
+        .comment-header {
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .comment-text {
+            font-size: 12px;
+            color: #2c3e50;
+        }
+
+        .save-load-section {
+            margin-top: auto;
+            padding: 15px 20px;
+            border-top: 1px solid #34495e;
+        }
+
+        .fullscreen-indicator {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(52, 152, 219, 0.9);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            z-index: 100;
+            display: none;
+        }
+
+        .fullscreen-indicator.visible {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <button class="sidebar-toggle" id="sidebarToggle"></button>
+        <div class="sidebar" id="sidebar">
+            
+            <div class="sidebar-header">
+                <h1>Page Builder</h1>
+                <p style="font-size: 11px; color: #bdc3c7;">Collaborative Design Tool</p>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="section-title">Elements</div>
+                <div class="element-types">
+                    <div class="element-type" data-type="container">Container</div>
+                    <div class="element-type" data-type="header">Header</div>
+                    <div class="element-type" data-type="button">Button</div>
+                    <div class="element-type" data-type="text-box">Text Box</div>
+                    <div class="element-type" data-type="input">Input</div>
+                    <div class="element-type" data-type="image">Image</div>
+                    <div class="element-type" data-type="card">Card</div>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="section-title">Grid Settings</div>
+                <div class="control-group">
+                    <label>Grid Size</label>
+                    <select id="gridSize">
+                        <option value="10">10px</option>
+                        <option value="20" selected>20px</option>
+                        <option value="40">40px</option>
+                        <option value="50">50px</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>
+                        <input type="checkbox" id="snapToGrid" checked>
+                        Snap to Grid
+                    </label>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="section-title">Actions</div>
+                <button class="button" onclick="exportLayout()">Export Layout</button>
+                <button class="button success" onclick="previewPage()">Preview</button>
+                <button class="button warning" onclick="showComments()">View Comments</button>
+                <button class="button danger" onclick="clearAll()">Clear All</button>
+            </div>
+
+            <div class="save-load-section">
+                <div class="section-title">Save & Load</div>
+                <button class="button success" onclick="saveState()">Save State</button>
+                <button class="button" onclick="loadState()">Load State</button>
+                <div class="control-group" style="margin-top: 10px;">
+                    <label>Project Name</label>
+                    <input type="text" id="projectName" placeholder="Enter project name">
+                </div>
+            </div>
+        </div>
+
+        <div class="main-workspace" id="mainWorkspace">
+            <div class="fullscreen-indicator" id="fullscreenIndicator">Full Workspace Mode - Press ESC or click sidebar toggle to return</div>
+            <div class="workspace" id="workspace">
+                <div class="grid-overlay" id="gridOverlay"></div>
+                <div class="coordinates" id="coordinates">X: 0, Y: 0</div>
+                <div class="element-count" id="elementCount">Elements: 0</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="properties-panel" id="propertiesPanel">
+        <button class="close-panel" onclick="closeProperties()">×</button>
+        <div class="properties-title">Element Properties</div>
+        <div id="propertiesContent">
+            <div class="property-group">
+                <label>Text Content</label>
+                <textarea id="textContent" placeholder="Enter text content..."></textarea>
+            </div>
+            <div class="property-group">
+                <label>Link URL (for buttons)</label>
+                <input type="url" id="linkUrl" placeholder="https://example.com">
+            </div>
+            <div class="property-group">
+                <label>Image URL</label>
+                <input type="url" id="imageUrl" placeholder="https://example.com/image.jpg">
+            </div>
+            <div class="property-group">
+                <label>Size</label>
+                <div class="size-controls">
+                    <input type="number" id="elementWidth" placeholder="Width" min="20">
+                    <input type="number" id="elementHeight" placeholder="Height" min="20">
+                </div>
+            </div>
+            <div class="property-group">
+                <label>Position</label>
+                <div class="size-controls">
+                    <input type="number" id="elementX" placeholder="X">
+                    <input type="number" id="elementY" placeholder="Y">
+                </div>
+            </div>
+            <button class="button" onclick="applyProperties()">Apply Changes</button>
+            <button class="button warning" onclick="addComment()">Add Comment</button>
+        </div>
+    </div>
+
+    <div class="comment-modal" id="commentModal">
+        <div class="comment-content">
+            <div class="comment-title">Add Comment</div>
+            <textarea class="comment-textarea" id="commentText" placeholder="Describe what you'd like to change or improve..."></textarea>
+            <div class="comment-buttons">
+                <button class="button" onclick="closeCommentModal()">Cancel</button>
+                <button class="button success" onclick="submitComment()">Submit</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="comments-panel" id="commentsPanel">
+        <div class="properties-title">Comments</div>
+        <div id="commentsList"></div>
+        <button class="button" onclick="closeComments()">Close</button>
+    </div>
+
+    <script>
+        console.log('Collaborative Page Builder loading...');
+        
+        // Global variables
+        let elements = [];
+        let comments = [];
+        let selectedElement = null;
+        let dragging = null;
+        let resizing = null;
+        let gridSize = 20;
+        let snapToGrid = true;
+        let nextId = 1;
+        let nextCommentId = 1;
+        let sidebarCollapsed = false;
+
+        // DOM elements
+        const workspace = document.getElementById('workspace');
+        const gridOverlay = document.getElementById('gridOverlay');
+        const coordinates = document.getElementById('coordinates');
+        const elementCount = document.getElementById('elementCount');
+        const propertiesPanel = document.getElementById('propertiesPanel');
+        const commentModal = document.getElementById('commentModal');
+        const commentsPanel = document.getElementById('commentsPanel');
+        const sidebar = document.getElementById('sidebar');
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const mainWorkspace = document.getElementById('mainWorkspace');
+        const fullscreenIndicator = document.getElementById('fullscreenIndicator');
+
+        function init() {
+            console.log('Initializing Collaborative Page Builder...');
+            updateGrid();
+            setupEventListeners();
+            console.log('Collaborative Page Builder initialized successfully!');
+        }
+
+        function setupEventListeners() {
+            console.log('Setting up event listeners...');
+            
+            // Sidebar toggle
+            sidebarToggle.addEventListener('click', toggleSidebar);
+            
+            // Keyboard shortcuts
+            document.addEventListener('keydown', handleKeyDown);
+            
+            // Grid size control
+            const gridSizeSelect = document.getElementById('gridSize');
+            if (gridSizeSelect) {
+                gridSizeSelect.addEventListener('change', (e) => {
+                    gridSize = parseInt(e.target.value);
+                    updateGrid();
+                    snapElementsToGrid();
+                });
+            }
+
+            // Snap to grid control
+            const snapToGridCheckbox = document.getElementById('snapToGrid');
+            if (snapToGridCheckbox) {
+                snapToGridCheckbox.addEventListener('change', (e) => {
+                    snapToGrid = e.target.checked;
+                });
+            }
+
+            // Workspace events
+            workspace.addEventListener('click', handleWorkspaceClick);
+            workspace.addEventListener('mousemove', handleMouseMove);
+            workspace.addEventListener('mouseleave', handleMouseLeave);
+
+            // Global mouse events
+            document.addEventListener('mousedown', handleMouseDown);
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+
+            // Element type selection
+            document.querySelectorAll('.element-type').forEach(type => {
+                type.addEventListener('click', () => {
+                    document.querySelectorAll('.element-type').forEach(t => t.classList.remove('selected'));
+                    type.classList.add('selected');
+                });
+            });
+
+            console.log('Event listeners set up successfully!');
+        }
+
+        function toggleSidebar() {
+            console.log('Toggle sidebar called, current state:', sidebarCollapsed);
+            sidebarCollapsed = !sidebarCollapsed;
+            
+            if (sidebarCollapsed) {
+                sidebar.classList.add('collapsed');
+                fullscreenIndicator.classList.add('visible');
+                sidebarToggle.style.left = '0px';
+                mainWorkspace.setAttribute('style', 'width: 100vw !important; max-width: 100vw !important; flex: none !important; position: relative; background: #ecf0f1; overflow: auto; transition: all 0.2s ease; margin-left: 0;');
+                document.querySelector('.app-container').setAttribute('style', 'display: flex; height: 100vh; position: relative; width: 100vw;');
+                console.log('Sidebar collapsed, mainWorkspace width set to:', mainWorkspace.style.width);
+            } else {
+                sidebar.classList.remove('collapsed');
+                fullscreenIndicator.classList.remove('visible');
+                sidebarToggle.style.left = '280px';
+                mainWorkspace.removeAttribute('style');
+                document.querySelector('.app-container').removeAttribute('style');
+                console.log('Sidebar expanded, mainWorkspace width reset');
+            }
+        }
+
+        function handleKeyDown(e) {
+            // ESC key to toggle sidebar
+            if (e.key === 'Escape') {
+                if (sidebarCollapsed) {
+                    toggleSidebar();
+                }
+            }
+            
+            // Ctrl/Cmd + B to toggle sidebar
+            if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+                e.preventDefault();
+                toggleSidebar();
+            }
+        }
+
+        function updateGrid() {
+            gridOverlay.style.backgroundSize = gridSize + 'px ' + gridSize + 'px';
+        }
+
+        function handleWorkspaceClick(e) {
+            if (e.target === workspace) {
+                const selectedType = document.querySelector('.element-type.selected');
+                if (selectedType) {
+                    addElement(selectedType.dataset.type, e.offsetX, e.offsetY);
+                }
+            }
+        }
+
+        function handleMouseMove(e) {
+            if (e.target === workspace) {
+                const rect = workspace.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                coordinates.textContent = `X: ${Math.round(x)}, Y: ${Math.round(y)}`;
+            }
+
+            if (dragging) {
+                const rect = workspace.getBoundingClientRect();
+                let newX = e.clientX - rect.left - dragging.offsetX;
+                let newY = e.clientY - rect.top - dragging.offsetY;
+
+                let finalX = Math.max(0, newX);
+                let finalY = Math.max(0, newY);
+
+                if (snapToGrid) {
+                    finalX = Math.round(finalX / gridSize) * gridSize;
+                    finalY = Math.round(finalY / gridSize) * gridSize;
+                }
+
+                dragging.x = finalX;
+                dragging.y = finalY;
+                dragging.el.style.left = finalX + 'px';
+                dragging.el.style.top = finalY + 'px';
+            }
+
+            if (resizing) {
+                const rect = workspace.getBoundingClientRect();
+                let newWidth = e.clientX - rect.left - resizing.startX + resizing.startWidth;
+                let newHeight = e.clientY - rect.top - resizing.startY + resizing.startHeight;
+
+                newWidth = Math.max(80, newWidth);
+                newHeight = Math.max(40, newHeight);
+
+                if (snapToGrid) {
+                    newWidth = Math.round(newWidth / gridSize) * gridSize;
+                    newHeight = Math.round(newHeight / gridSize) * gridSize;
+                }
+
+                resizing.el.style.width = newWidth + 'px';
+                resizing.el.style.height = newHeight + 'px';
+            }
+        }
+
+        function handleMouseLeave() {
+            coordinates.textContent = 'X: 0, Y: 0';
+        }
+
+        function handleMouseDown(e) {
+            if (e.target.classList.contains('element')) {
+                e.preventDefault();
+                selectElement(e.target);
+                
+                if (e.target.classList.contains('resize-handle')) {
+                    // Start resizing
+                    const rect = e.target.getBoundingClientRect();
+                    const workspaceRect = workspace.getBoundingClientRect();
+                    resizing = {
+                        el: e.target.parentElement,
+                        startX: e.clientX - workspaceRect.left,
+                        startY: e.clientY - workspaceRect.top,
+                        startWidth: parseInt(e.target.parentElement.style.width) || 80,
+                        startHeight: parseInt(e.target.parentElement.style.height) || 40
+                    };
+                } else {
+                    // Start dragging
+                    const rect = e.target.getBoundingClientRect();
+                    dragging = {
+                        el: e.target,
+                        offsetX: e.clientX - rect.left,
+                        offsetY: e.clientY - rect.top,
+                        x: parseInt(e.target.style.left) || 0,
+                        y: parseInt(e.target.style.top) || 0
+                    };
+                    
+                    e.target.classList.add('dragging');
+                    document.body.style.cursor = 'grabbing';
+                }
+            }
+        }
+
+        function handleMouseUp() {
+            if (dragging) {
+                dragging.el.classList.remove('dragging');
+                dragging = null;
+                document.body.style.cursor = 'default';
+            }
+            if (resizing) {
+                resizing = null;
+            }
+        }
+
+        function addElement(type, x, y) {
+            const element = {
+                id: nextId++,
+                type: type,
+                x: snapToGrid ? Math.round(x / gridSize) * gridSize : x,
+                y: snapToGrid ? Math.round(y / gridSize) * gridSize : y,
+                width: getDefaultWidth(type),
+                height: getDefaultHeight(type),
+                text: getDefaultText(type),
+                link: '',
+                imageUrl: '',
+                comments: []
+            };
+
+            elements.push(element);
+            createElementElement(element);
+            updateElementCount();
+        }
+
+        function getDefaultWidth(type) {
+            const widths = {
+                'container': 200,
+                'header': 300,
+                'button': 120,
+                'text-box': 200,
+                'input': 150,
+                'image': 100,
+                'card': 180
+            };
+            return widths[type] || 100;
+        }
+
+        function getDefaultHeight(type) {
+            const heights = {
+                'container': 150,
+                'header': 60,
+                'button': 40,
+                'text-box': 80,
+                'input': 35,
+                'image': 100,
+                'card': 120
+            };
+            return heights[type] || 40;
+        }
+
+        function getDefaultText(type) {
+            const texts = {
+                'container': 'Container',
+                'header': 'Header Text',
+                'button': 'Button',
+                'text-box': 'Text content goes here...',
+                'input': 'Input field',
+                'image': '📷 Image',
+                'card': 'Card Content'
+            };
+            return texts[type] || 'Element';
+        }
+
+        function createElementElement(element) {
+            const el = document.createElement('div');
+            el.className = `element ${element.type}`;
+            el.id = 'element-' + element.id;
+            el.style.left = element.x + 'px';
+            el.style.top = element.y + 'px';
+            el.style.width = element.width + 'px';
+            el.style.height = element.height + 'px';
+            el.textContent = element.text;
+            
+            // Add resize handle
+            const resizeHandle = document.createElement('div');
+            resizeHandle.className = 'resize-handle';
+            el.appendChild(resizeHandle);
+            
+            // Add comment indicator if element has comments
+            if (element.comments && element.comments.length > 0) {
+                const commentIndicator = document.createElement('div');
+                commentIndicator.className = 'comment-indicator';
+                commentIndicator.textContent = element.comments.length;
+                commentIndicator.onclick = () => showElementComments(element.id);
+                el.appendChild(commentIndicator);
+            }
+            
+            el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                selectElement(el);
+            });
+
+            workspace.appendChild(el);
+        }
+
+        function selectElement(el) {
+            deselectAll();
+            el.classList.add('selected');
+            selectedElement = el;
+            showProperties(el);
+        }
+
+        function deselectAll() {
+            document.querySelectorAll('.element').forEach(el => {
+                el.classList.remove('selected');
+            });
+            selectedElement = null;
+            hideProperties();
+        }
+
+        function showProperties(el) {
+            const elementId = el.id.replace('element-', '');
+            const element = elements.find(e => e.id == elementId);
+            
+            if (element) {
+                document.getElementById('textContent').value = element.text || '';
+                document.getElementById('linkUrl').value = element.link || '';
+                document.getElementById('imageUrl').value = element.imageUrl || '';
+                document.getElementById('elementWidth').value = element.width || 80;
+                document.getElementById('elementHeight').value = element.height || 40;
+                document.getElementById('elementX').value = element.x || 0;
+                document.getElementById('elementY').value = element.y || 0;
+                
+                propertiesPanel.classList.add('visible');
+            }
+        }
+
+        function hideProperties() {
+            propertiesPanel.classList.remove('visible');
+        }
+
+        function closeProperties() {
+            hideProperties();
+            deselectAll();
+        }
+
+        function applyProperties() {
+            if (!selectedElement) return;
+            
+            const elementId = selectedElement.id.replace('element-', '');
+            const element = elements.find(e => e.id == elementId);
+            
+            if (element) {
+                element.text = document.getElementById('textContent').value;
+                element.link = document.getElementById('linkUrl').value;
+                element.imageUrl = document.getElementById('imageUrl').value;
+                element.width = parseInt(document.getElementById('elementWidth').value) || 80;
+                element.height = parseInt(document.getElementById('elementHeight').value) || 40;
+                element.x = parseInt(document.getElementById('elementX').value) || 0;
+                element.y = parseInt(document.getElementById('elementY').value) || 0;
+                
+                // Update the visual element
+                selectedElement.textContent = element.text;
+                selectedElement.style.width = element.width + 'px';
+                selectedElement.style.height = element.height + 'px';
+                selectedElement.style.left = element.x + 'px';
+                selectedElement.style.top = element.y + 'px';
+                
+                // Add resize handle back
+                if (!selectedElement.querySelector('.resize-handle')) {
+                    const resizeHandle = document.createElement('div');
+                    resizeHandle.className = 'resize-handle';
+                    selectedElement.appendChild(resizeHandle);
+                }
+            }
+        }
+
+        function addComment() {
+            if (!selectedElement) return;
+            commentModal.classList.add('visible');
+            document.getElementById('commentText').focus();
+        }
+
+        function closeCommentModal() {
+            commentModal.classList.remove('visible');
+            document.getElementById('commentText').value = '';
+        }
+
+        function submitComment() {
+            const commentText = document.getElementById('commentText').value.trim();
+            if (!commentText || !selectedElement) return;
+
+            const elementId = selectedElement.id.replace('element-', '');
+            const element = elements.find(e => e.id == elementId);
+            
+            if (element) {
+                const comment = {
+                    id: nextCommentId++,
+                    elementId: elementId,
+                    text: commentText,
+                    timestamp: new Date().toLocaleString(),
+                    author: 'User'
+                };
+
+                if (!element.comments) element.comments = [];
+                element.comments.push(comment);
+                comments.push(comment);
+
+                // Add comment indicator to element
+                let indicator = selectedElement.querySelector('.comment-indicator');
+                if (!indicator) {
+                    indicator = document.createElement('div');
+                    indicator.className = 'comment-indicator';
+                    indicator.onclick = () => showElementComments(elementId);
+                    selectedElement.appendChild(indicator);
+                }
+                indicator.textContent = element.comments.length;
+
+                closeCommentModal();
+                updateCommentsDisplay();
+            }
+        }
+
+        function showComments() {
+            updateCommentsDisplay();
+            commentsPanel.classList.add('visible');
+        }
+
+        function closeComments() {
+            commentsPanel.classList.remove('visible');
+        }
+
+        function showElementComments(elementId) {
+            const element = elements.find(e => e.id == elementId);
+            if (element && element.comments) {
+                const elementComments = element.comments.map(comment => ({
+                    ...comment,
+                    elementType: element.type,
+                    elementText: element.text
+                }));
+                
+                displayComments(elementComments);
+                commentsPanel.classList.add('visible');
+            }
+        }
+
+        function updateCommentsDisplay() {
+            displayComments(comments);
+        }
+
+        function displayComments(commentsToShow) {
+            const commentsList = document.getElementById('commentsList');
+            commentsList.innerHTML = '';
+
+            if (commentsToShow.length === 0) {
+                commentsList.innerHTML = '<p style="color: #666; font-size: 12px;">No comments yet</p>';
+                return;
+            }
+
+            commentsToShow.forEach(comment => {
+                const commentItem = document.createElement('div');
+                commentItem.className = 'comment-item';
+                
+                const element = elements.find(e => e.id == comment.elementId);
+                const elementInfo = element ? `${element.type}: "${element.text}"` : 'Unknown element';
+                
+                commentItem.innerHTML = `
+                    <div class="comment-header">
+                        ${comment.author} on ${elementInfo} - ${comment.timestamp}
+                    </div>
+                    <div class="comment-text">${comment.text}</div>
+                `;
+                
+                commentsList.appendChild(commentItem);
+            });
+        }
+
+        function snapElementsToGrid() {
+            elements.forEach(element => {
+                element.x = Math.round(element.x / gridSize) * gridSize;
+                element.y = Math.round(element.y / gridSize) * gridSize;
+                const el = document.getElementById('element-' + element.id);
+                if (el) {
+                    el.style.left = element.x + 'px';
+                    el.style.top = element.y + 'px';
+                }
+            });
+        }
+
+        function updateElementCount() {
+            elementCount.textContent = `Elements: ${elements.length}`;
+        }
+
+        function saveState() {
+            const projectName = document.getElementById('projectName').value || 'untitled';
+            const state = {
+                projectName: projectName,
+                elements: elements,
+                comments: comments,
+                gridSize: gridSize,
+                snapToGrid: snapToGrid,
+                timestamp: new Date().toISOString()
+            };
+
+            const dataStr = JSON.stringify(state, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(dataBlob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${projectName}-page-builder.json`;
+            link.click();
+            
+            URL.revokeObjectURL(url);
+            alert(`Project "${projectName}" saved successfully!`);
+        }
+
+        function loadState() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const state = JSON.parse(e.target.result);
+                            loadStateData(state);
+                        } catch (error) {
+                            alert('Error loading file: ' + error.message);
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            };
+            input.click();
+        }
+
+        function loadStateData(state) {
+            // Clear current state
+            elements = [];
+            comments = [];
+            workspace.querySelectorAll('.element').forEach(el => el.remove());
+            
+            // Load new state
+            if (state.elements) elements = state.elements;
+            if (state.comments) comments = state.comments;
+            if (state.gridSize) {
+                gridSize = state.gridSize;
+                document.getElementById('gridSize').value = gridSize;
+            }
+            if (state.snapToGrid !== undefined) {
+                snapToGrid = state.snapToGrid;
+                document.getElementById('snapToGrid').checked = snapToGrid;
+            }
+            if (state.projectName) {
+                document.getElementById('projectName').value = state.projectName;
+            }
+            
+            // Recreate elements
+            elements.forEach(element => createElementElement(element));
+            updateGrid();
+            updateElementCount();
+            
+            alert(`Project "${state.projectName}" loaded successfully!`);
+        }
+
+        function exportLayout() {
+            const layout = {
+                elements: elements.map(el => ({
+                    type: el.type,
+                    x: el.x,
+                    y: el.y,
+                    width: el.width,
+                    height: el.height,
+                    text: el.text,
+                    link: el.link,
+                    imageUrl: el.imageUrl
+                })),
+                comments: comments
+            };
+
+            console.log('Page Layout:', layout);
+            alert('Layout exported to console! Check browser console for details.');
+        }
+
+        function previewPage() {
+            const previewWindow = window.open('', '_blank');
+            const layout = elements.map(el => ({
+                type: el.type,
+                x: el.x,
+                y: el.y,
+                width: el.width,
+                height: el.height,
+                text: el.text,
+                link: el.link,
+                imageUrl: el.imageUrl
+            }));
+
+            const previewHTML = generatePreviewHTML(layout);
+            previewWindow.document.write(previewHTML);
+            previewWindow.document.close();
+        }
+
+        function generatePreviewHTML(layout) {
+            let html = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Page Preview</title>
+                    <style>
+                        body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
+                        .preview-container { 
+                            width: 100%; 
+                            margin: 0 auto; 
+                            position: relative; 
+                            min-height: 600px;
+                            background: white;
+                            border: 1px solid #ddd;
+                        }
+                        .preview-element {
+                            position: absolute;
+                            border-radius: 4px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            font-size: 12px;
+                        }
+                        .preview-button { background: #3498db; color: white; border: none; padding: 10px 20px; cursor: pointer; }
+                        .preview-text-box { background: #ecf0f1; color: #2c3e50; border: 1px solid #bdc3c7; padding: 10px; text-align: left; }
+                        .preview-image { background: #95a5a6; color: white; border: 2px dashed #7f8c8d; }
+                        .preview-container { background: rgba(52, 152, 219, 0.1); border: 2px dashed #3498db; }
+                        .preview-header { background: #34495e; color: white; font-size: 16px; font-weight: bold; }
+                        .preview-input { background: white; color: #2c3e50; border: 1px solid #bdc3c7; padding: 8px; }
+                        .preview-card { background: white; color: #2c3e50; border: 1px solid #ecf0f1; box-shadow: 0 2px 10px rgba(0,0,0,0.1); padding: 15px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="preview-container">
+            `;
+
+            layout.forEach(element => {
+                const style = `left: ${element.x}px; top: ${element.y}px; width: ${element.width}px; height: ${element.height}px;`;
+                const content = element.type === 'image' ? '📷 Image' : element.text;
+                const link = element.link ? `onclick="window.open('${element.link}', '_blank')"` : '';
+                
+                html += `<div class="preview-element preview-${element.type}" style="${style}" ${link}>${content}</div>`;
+            });
+
+            html += `
+                    </div>
+                </body>
+                </html>
+            `;
+
+            return html;
+        }
+
+        function clearAll() {
+            if (confirm('Are you sure you want to clear all elements and comments?')) {
+                elements = [];
+                comments = [];
+                workspace.querySelectorAll('.element').forEach(el => el.remove());
+                updateElementCount();
+                deselectAll();
+            }
+        }
+
+        // Initialize when page loads
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html> 
